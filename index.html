@@ -3,79 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✨ Minimalist QR Pro Generator</title>
+<title>LumiQR - Premium Minimalist QR Generator</title>
+
+<!-- QR Code Styling -->
 <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
+
+<!-- Firebase config -->
+<script src="firebaseConfig.js"></script>
+
+<!-- Fonts & Styles -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>
-/* Reset & base */
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Inter',sans-serif; background:#f2f4f8; display:flex; flex-direction:column; align-items:center; min-height:100vh; padding:50px; color:#1c1c1e; }
-
-/* Title */
-h1 { font-weight:600; font-size:2rem; margin-bottom:40px; text-align:center; }
-
-/* Layout */
-.container { display:flex; flex-wrap:wrap; justify-content:center; gap:40px; width:100%; max-width:1200px; }
-.card { background:white; border-radius:24px; padding:30px; box-shadow:0 16px 40px rgba(0,0,0,0.08); transition:0.5s; position:relative; }
-.card:hover { transform: translateY(-5px); box-shadow:0 24px 60px rgba(0,0,0,0.12); }
-
-/* Controls */
-.controls { flex:1; min-width:350px; display:flex; flex-direction:column; gap:20px; }
-input[type=text], input[type=color], select, input[type=file], button { padding:12px 18px; font-size:1rem; border-radius:14px; border:1px solid #ccc; outline:none; background:#fafafa; transition:0.3s; }
-input[type=text]:focus, select:focus, input[type=color]:focus { border-color:#4caf50; box-shadow:0 0 8px rgba(76,175,80,0.2); }
-button { background:#4caf50; color:white; border:none; cursor:pointer; transition:0.3s; }
-button:hover { background:#45a049; transform: translateY(-2px); }
-
-/* Labels */
-label { font-weight:600; font-size:0.9rem; margin-top:5px; }
-
-/* Preview */
-.preview { flex:1; min-width:350px; display:flex; flex-direction:column; align-items:center; gap:15px; }
-#qr-container { margin-top:10px; border-radius:20px; padding:20px; background:white; box-shadow:0 12px 32px rgba(0,0,0,0.06); transition: all 0.4s ease; }
-
-/* Download Buttons */
-.download-buttons { display:flex; gap:15px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
-.download-buttons button { flex:1; min-width:130px; }
-
-/* Gradient preview live */
-.gradient-preview { width:100%; height:10px; border-radius:10px; margin-top:-10px; transition:0.4s; }
-
-/* History */
-.history { margin-top:50px; width:100%; max-width:700px; }
-.history h2 { font-weight:600; margin-bottom:15px; }
-.history-list { display:flex; flex-wrap:wrap; gap:15px; }
-.history-item { width:90px; height:90px; overflow:hidden; border-radius:18px; cursor:pointer; transition:0.3s; border:1px solid #ddd; }
-.history-item:hover { transform:scale(1.1); box-shadow:0 8px 20px rgba(0,0,0,0.08); }
-.history-item img { width:100%; height:100%; object-fit:contain; }
-
-/* Floating panels & smooth animation */
-.card { position:relative; overflow:hidden; }
-.card::before { content:""; position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:linear-gradient(120deg,#ff7e5f,#feb47b,#86a8e7,#91eae4); filter:blur(90px); opacity:0.2; transform:translate(0,0); transition:0.8s; pointer-events:none; border-radius:50%; }
-.card:hover::before { transform:translate(20px,20px); opacity:0.3; }
-
-/* Responsive */
-@media(max-width:900px){ .container { flex-direction:column; align-items:center; } }
+body{font-family:'Inter',sans-serif;background:#f2f4f8;margin:0;padding:50px;display:flex;flex-direction:column;align-items:center;color:#1c1c1e;}
+h1{text-align:center;font-weight:600;font-size:2rem;margin-bottom:40px;}
+.container{display:flex;flex-wrap:wrap;justify-content:center;gap:40px;width:100%;max-width:1200px;}
+.card{background:white;border-radius:24px;padding:30px;box-shadow:0 16px 40px rgba(0,0,0,0.08);transition:0.5s;position:relative;overflow:hidden;}
+.card:hover{transform:translateY(-5px);box-shadow:0 24px 60px rgba(0,0,0,0.12);}
+.controls{flex:1;min-width:350px;display:flex;flex-direction:column;gap:20px;}
+input[type=text],input[type=color],select,input[type=file],button{padding:12px 18px;font-size:1rem;border-radius:14px;border:1px solid #ccc;background:#fafafa;transition:0.3s;}
+input:focus,select:focus,input[type=color]:focus{border-color:#6366f1;box-shadow:0 0 8px rgba(99,102,241,0.2);}
+button{background:#6366f1;color:white;border:none;cursor:pointer;transition:0.3s;}
+button:hover{background:#4f46e5;transform:translateY(-2px);}
+label{font-weight:600;font-size:0.9rem;margin-top:5px;}
+.preview{flex:1;min-width:350px;display:flex;flex-direction:column;align-items:center;gap:15px;}
+#qr-container{margin-top:10px;border-radius:20px;padding:20px;background:white;box-shadow:0 12px 32px rgba(0,0,0,0.06);transition: all 0.4s ease;}
+.download-buttons{display:flex;gap:15px;flex-wrap:wrap;justify-content:center;margin-top:10px;}
+.download-buttons button{flex:1;min-width:130px;}
+.gradient-preview{width:100%;height:10px;border-radius:10px;margin-top:-10px;transition:0.4s;}
+.history{margin-top:50px;width:100%;max-width:700px;}
+.history h2{font-weight:600;margin-bottom:15px;}
+.history-list{display:flex;flex-wrap:wrap;gap:15px;}
+.history-item{width:90px;height:90px;overflow:hidden;border-radius:18px;cursor:pointer;transition:0.3s;border:1px solid #ddd;}
+.history-item:hover{transform:scale(1.1);box-shadow:0 8px 20px rgba(0,0,0,0.08);}
+.history-item img{width:100%;height:100%;object-fit:contain;}
+.auth-buttons{display:flex;gap:15px;justify-content:center;margin-bottom:30px;}
+.auth-buttons button{flex:1;min-width:140px;background:#f59e0b;}
+.auth-buttons button:hover{background:#d97706;}
+.card::before{content:"";position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(120deg,#ff7e5f,#feb47b,#86a8e7,#91eae4);filter:blur(90px);opacity:0.2;transform:translate(0,0);transition:0.8s;pointer-events:none;border-radius:50%;}
+.card:hover::before{transform:translate(20px,20px);opacity:0.3;}
+@media(max-width:900px){.container{flex-direction:column;align-items:center;}}
+.color-preview{width:25px;height:25px;border-radius:50%;border:1px solid #aaa;margin-left:10px;display:inline-block;vertical-align:middle;}
 </style>
 </head>
 <body>
 
-<h1>✨ Minimalist QR Pro Generator</h1>
+<h1>LumiQR - Minimalist QR Generator</h1>
+
+<div class="auth-buttons">
+  <button id="signInGoogle">Sign in with Google</button>
+  <button id="signInEmail">Sign in with Email</button>
+  <button id="signOut" style="display:none;">Sign Out</button>
+</div>
 
 <div class="container">
-  <!-- Controls Panel -->
   <div class="card controls">
     <label>Enter Text or URL</label>
     <input type="text" id="text" placeholder="https://example.com">
 
-    <label>Foreground Color</label>
-    <input type="color" id="fgColor" value="#000000">
+    <label>Foreground Color <span class="color-preview" id="fgPreview"></span></label>
+    <input type="color" id="fgColor" value="#1f2937">
 
-    <label>Background Color</label>
+    <label>Background Color <span class="color-preview" id="bgPreview"></span></label>
     <input type="color" id="bgColor" value="#ffffff">
 
     <label>Gradient (optional, comma-separated)</label>
     <input type="text" id="gradient" placeholder="#ff7e5f,#feb47b,#86a8e7">
-
     <div class="gradient-preview" id="gradientPreview"></div>
 
     <label>Template</label>
@@ -91,7 +89,6 @@ label { font-weight:600; font-size:0.9rem; margin-top:5px; }
     <button id="generate">Generate QR Code</button>
   </div>
 
-  <!-- Preview Panel -->
   <div class="card preview">
     <div id="qr-container"></div>
     <div class="download-buttons">
@@ -101,98 +98,115 @@ label { font-weight:600; font-size:0.9rem; margin-top:5px; }
   </div>
 </div>
 
-<!-- History -->
 <div class="history card">
   <h2>History</h2>
   <div class="history-list" id="historyList"></div>
 </div>
 
 <script>
-  // Initialize QR Code
-  let qrCode = new QRCodeStyling({
-    width: 300, height: 300, data: "", 
-    dotsOptions: { color:"#000000", type:"rounded" },
-    cornersSquareOptions: { type:"extra-rounded", color:"#000000" },
-    cornersDotOptions: { type:"dot", color:"#000000" },
-    backgroundOptions: { color:"#ffffff" },
-    imageOptions: { crossOrigin:"anonymous", margin:5 }
-  });
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
   const qrContainer = document.getElementById("qr-container");
+  const historyList = document.getElementById("historyList");
+  const fgColor = document.getElementById("fgColor");
+  const bgColor = document.getElementById("bgColor");
+  const fgPreview = document.getElementById("fgPreview");
+  const bgPreview = document.getElementById("bgPreview");
+  const gradientInput = document.getElementById("gradient");
+  const gradientPreview = document.getElementById("gradientPreview");
+  let currentUser = null;
+
+  // QR Code init
+  let qrCode = new QRCodeStyling({
+    width: 300, height: 300, data: "",
+    dotsOptions: { color: fgColor.value, type: "rounded" },
+    cornersSquareOptions: { type:"extra-rounded", color: fgColor.value },
+    cornersDotOptions: { type:"dot", color: fgColor.value },
+    backgroundOptions: { color: bgColor.value },
+    imageOptions: { crossOrigin:"anonymous", margin:5 }
+  });
   qrCode.append(qrContainer);
 
-  const gradientPreview = document.getElementById("gradientPreview");
-  const gradientInput = document.getElementById("gradient");
-  gradientInput.addEventListener("input", ()=>{
-    gradientPreview.style.background = `linear-gradient(90deg, ${gradientInput.value})`;
+  // Color previews
+  fgPreview.style.background = fgColor.value;
+  bgPreview.style.background = bgColor.value;
+  fgColor.addEventListener("input",()=>fgPreview.style.background=fgColor.value);
+  bgColor.addEventListener("input",()=>bgPreview.style.background=bgColor.value);
+  gradientInput.addEventListener("input",()=>gradientPreview.style.background=`linear-gradient(90deg, ${gradientInput.value})`);
+
+  // Authentication
+  document.getElementById("signInGoogle").addEventListener("click", ()=>{
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+  });
+  document.getElementById("signOut").addEventListener("click", ()=>auth.signOut());
+
+  auth.onAuthStateChanged(user=>{
+    currentUser=user;
+    document.getElementById("signInGoogle").style.display = user? "none":"inline-block";
+    document.getElementById("signInEmail").style.display = user? "none":"inline-block";
+    document.getElementById("signOut").style.display = user? "inline-block":"none";
+    if(user) loadHistory();
   });
 
-  // History
-  const historyList = document.getElementById("historyList");
-  let history = JSON.parse(localStorage.getItem("qrHistory")) || [];
-
-  function updateHistory(){
-    historyList.innerHTML="";
-    history.slice(-5).reverse().forEach(item=>{
-      const div=document.createElement("div");
-      div.classList.add("history-item");
-      const img=document.createElement("img");
-      img.src=item;
-      div.appendChild(img);
-      div.onclick=()=>qrCode.update({data:item});
-      historyList.appendChild(div);
-    });
-  }
-  updateHistory();
-
-  function saveHistory(dataURL){
-    history.push(dataURL);
-    localStorage.setItem("qrHistory", JSON.stringify(history.slice(-20)));
-    updateHistory();
-  }
-
-  document.getElementById("generate").addEventListener("click", ()=>{
+  // Generate QR
+  document.getElementById("generate").addEventListener("click",()=>{
     const text = document.getElementById("text").value;
-    if(!text){alert("Enter text or URL!"); return;}
-    const fg = document.getElementById("fgColor").value;
-    const bg = document.getElementById("bgColor").value;
-    const grad = document.getElementById("gradient").value;
-    const template = document.getElementById("template").value;
-    const logoFile = document.getElementById("logoInput").files[0];
-
-    let dotsType="rounded";
-    if(template==="classic") dotsType="classy-rounded";
-    if(template==="dots") dotsType="dots";
-
+    if(!text){alert("Enter text or URL"); return;}
+    let dotsType = document.getElementById("template").value==="classic"?"classy-rounded":document.getElementById("template").value==="dots"?"dots":"rounded";
     let options = {
       data:text,
-      dotsOptions:{ color:fg, type:dotsType },
-      cornersSquareOptions:{ type:"extra-rounded", color:fg },
-      cornersDotOptions:{ type:"dot", color:fg },
-      backgroundOptions:{ color:bg }
+      dotsOptions:{ color: fgColor.value, type: dotsType },
+      cornersSquareOptions:{ type:"extra-rounded", color: fgColor.value },
+      cornersDotOptions:{ type:"dot", color: fgColor.value },
+      backgroundOptions:{ color:bgColor.value }
     };
-
+    const grad=gradientInput.value;
     if(grad){
       const stops=grad.split(",").map((c,i)=>({offset:i,color:c}));
       options.dotsOptions.gradient={ type:"linear", rotation:45, colorStops:stops };
     }
-
+    const logoFile = document.getElementById("logoInput").files[0];
     if(logoFile){
-      const reader=new FileReader();
-      reader.onload=function(e){
-        options.image=e.target.result;
-        qrCode.update(options);
-        saveHistory(qrCode.getRawDataURL());
-      }
+      const reader = new FileReader();
+      reader.onload=function(e){options.image=e.target.result; qrCode.update(options); saveHistory(text);};
       reader.readAsDataURL(logoFile);
-    } else {
-      qrCode.update(options);
-      saveHistory(qrCode.getRawDataURL());
-    }
+    } else { qrCode.update(options); saveHistory(text); }
   });
 
-  document.getElementById("download-png").addEventListener("click", ()=> qrCode.download({name:"qr-code", extension:"png"}));
-  document.getElementById("download-svg").addEventListener("click", ()=> qrCode.download({name:"qr-code", extension:"svg"}));
+  // Download buttons
+  document.getElementById("download-png").addEventListener("click", ()=>qrCode.download({name:"lumiqr",extension:"png"}));
+  document.getElementById("download-svg").addEventListener("click", ()=>qrCode.download({name:"lumiqr",extension:"svg"}));
+
+  // Save to Firestore
+  function saveHistory(text){
+    if(!currentUser) return;
+    db.collection("users").doc(currentUser.uid).collection("qrcodes").add({
+      text:text, timestamp:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(loadHistory);
+  }
+
+  // Load user history
+  function loadHistory(){
+    if(!currentUser) return;
+    db.collection("users").doc(currentUser.uid).collection("qrcodes").orderBy("timestamp","desc").limit(10).get().then(snapshot=>{
+      historyList.innerHTML="";
+      snapshot.forEach(doc=>{
+        const div=document.createElement("div");
+        div.classList.add("history-item");
+        const img=document.createElement("img");
+        const qrData=new QRCodeStyling({width:90,height:90,data:doc.data().text,dotsOptions:{color:fgColor.value,type:"rounded"},cornersSquareOptions:{type:"extra-rounded",color:fgColor.value},backgroundOptions:{color:bgColor.value}});
+        qrData.getRawDataURL().then(url=>img.src=url);
+        div.appendChild(img);
+        div.onclick=()=>document.getElementById("text").value=doc.data().text;
+        historyList.appendChild(div);
+      });
+    });
+  }
 </script>
+
 </body>
 </html>
