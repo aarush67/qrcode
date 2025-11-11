@@ -152,6 +152,17 @@ gradientPresets.forEach(g => {
   gradientPresetsContainer.appendChild(div);
 });
 
+
+  // Convert Blob to Base64 string
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 // Init QR
 let qrCode = new QRCodeStyling({
   width:300, height:300, data:"",
