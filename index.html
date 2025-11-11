@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>
 body { margin:0; font-family:'Inter',sans-serif; background:#f9fafb; color:#1f2937; }
-h1 { text-align:center; font-weight:600; font-size:2rem; margin:20px 0; }
+h1,h2 { font-weight:600; }
 .sidebar { position:fixed; top:0; left:0; width:220px; height:100%; background:#6366f1; color:white; display:flex; flex-direction:column; padding:20px; gap:10px; box-shadow:2px 0 10px rgba(0,0,0,0.1);}
 .sidebar button { background:transparent; border:none; color:white; font-weight:600; font-size:1rem; cursor:pointer; text-align:left; padding:10px; border-radius:8px; transition:0.3s; }
 .sidebar button:hover { background:#4f46e5; }
@@ -37,7 +37,7 @@ label{font-weight:600;margin-top:10px;display:block;}
 .download-buttons { display:flex; gap:15px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
 .download-buttons button { flex:1; min-width:130px;}
 .history-list { display:flex; flex-wrap:wrap; gap:15px; }
-.history-item { width:90px; height:90px; overflow:hidden; border-radius:18px; cursor:pointer; border:1px solid #ddd; transition:0.3s; }
+.history-item { width:90px; height:90px; overflow:hidden; border-radius:18px; cursor:pointer; border:1px solid #ddd; transition:0.3s; display:flex; align-items:center; justify-content:center;}
 .history-item:hover { transform:scale(1.1); box-shadow:0 8px 20px rgba(0,0,0,0.08);}
 .history-item img { width:100%; height:100%; object-fit:contain; }
 .color-preview { width:25px; height:25px; border-radius:50%; border:1px solid #aaa; display:inline-block; vertical-align:middle; margin-left:10px; }
@@ -45,8 +45,11 @@ label{font-weight:600;margin-top:10px;display:block;}
 .auth-buttons { display:flex; gap:15px; margin-bottom:20px;}
 .auth-buttons button { flex:1; background:#10b981; }
 .auth-buttons button:hover { background:#059669; }
-.preset-swatches { display:flex; gap:10px; margin-top:5px;}
+.preset-swatches { display:flex; gap:10px; margin-top:5px; }
 .swatch { width:30px; height:30px; border-radius:50%; cursor:pointer; border:2px solid #ddd;}
+.logo-drop { border:2px dashed #ccc; border-radius:16px; height:100px; display:flex; align-items:center; justify-content:center; margin-top:10px; cursor:pointer; transition:0.3s;}
+.logo-drop.dragover { border-color:#6366f1; background:#f0f0f0;}
+.logo-drop img { max-height:90px; max-width:90px; border-radius:12px;}
 </style>
 </head>
 <body>
@@ -88,7 +91,8 @@ label{font-weight:600;margin-top:10px;display:block;}
       </select>
 
       <label>Upload Logo/Icon</label>
-      <input type="file" id="logoInput" accept="image/*">
+      <div class="logo-drop" id="logoDrop">Drag & Drop Logo or Click</div>
+      <input type="file" id="logoInput" accept="image/*" style="display:none;">
 
       <button id="generate">Generate QR Code</button>
     </div>
@@ -133,7 +137,10 @@ const fgPreview = document.getElementById("fgPreview");
 const bgPreview = document.getElementById("bgPreview");
 const gradientInput = document.getElementById("gradient");
 const gradientPreview = document.getElementById("gradientPreview");
+const logoDrop = document.getElementById("logoDrop");
+const logoInput = document.getElementById("logoInput");
 let currentUser = null;
+let currentLogoDataURL = null;
 
 const gradientPresets = ["#6a11cb,#2575fc","#11998e,#38ef7d","#ee0979,#ff6a00"];
 const gradientPresetsContainer = document.getElementById("gradientPresets");
@@ -161,6 +168,26 @@ bgPreview.style.background = bgColor.value;
 fgColor.addEventListener("input", ()=>fgPreview.style.background = fgColor.value);
 bgColor.addEventListener("input", ()=>bgPreview.style.background = bgColor.value);
 gradientInput.addEventListener("input", ()=>gradientPreview.style.background = `linear-gradient(90deg, ${gradientInput.value})`);
+
+// Logo upload via drop or click
+logoDrop.addEventListener("click", ()=>logoInput.click());
+logoDrop.addEventListener("dragover", e=>{ e.preventDefault(); logoDrop.classList.add("dragover"); });
+logoDrop.addEventListener("dragleave", e=>{ e.preventDefault(); logoDrop.classList.remove("dragover"); });
+logoDrop.addEventListener("drop", e=> {
+  e.preventDefault(); logoDrop.classList.remove("dragover");
+  const file = e.dataTransfer.files[0];
+  if(file) { handleLogo(file); }
+});
+logoInput.addEventListener("change", e=> { handleLogo(e.target.files[0]); });
+
+function handleLogo(file){
+  const reader = new FileReader();
+  reader.onload = e => {
+    currentLogoDataURL = e.target.result;
+    logoDrop.innerHTML = `<img src="${currentLogoDataURL}">`;
+  };
+  reader.readAsDataURL(file);
+}
 
 // Page navigation
 document.getElementById("navEditor").addEventListener("click", ()=>showPage("pageEditor"));
@@ -197,15 +224,10 @@ document.getElementById("generate").addEventListener("click",()=>{
     bgColor: bgColor.value,
     gradient: gradientInput.value,
     dotsType,
-    logoDataURL: null
+    logoDataURL: currentLogoDataURL
   };
-
-  const logoFile = document.getElementById("logoInput").files[0];
-  if(logoFile){
-    const reader = new FileReader();
-    reader.onload = e => { settings.logoDataURL = e.target.result; updateQRCode(settings); saveHistoryWithImage(settings); }
-    reader.readAsDataURL(logoFile);
-  } else { updateQRCode(settings); saveHistoryWithImage(settings); }
+  updateQRCode(settings);
+  saveHistoryWithImage(settings);
 });
 
 function updateQRCode(settings){
@@ -253,7 +275,8 @@ function saveHistoryWithImage(settings){
       settings,
       image: base64,
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(loadHistory);
+    }).then(loadHistory)
+    .catch(err=>alert("Error saving QR: "+err.message));
   });
 }
 
@@ -271,6 +294,7 @@ function loadHistory(){
         const img = document.createElement("img");
         img.src = data.image;
         div.appendChild(img);
+        div.title = data.text;
         div.onclick = ()=> { updateQRCode(data.settings); showPage("pageEditor"); }
         historyList.appendChild(div);
       });
