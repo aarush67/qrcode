@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LumiQR - Premium Minimalist QR Generator</title>
+<title>LumiQR - Minimalist QR Generator</title>
 
 <!-- QR Code Styling -->
 <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
@@ -12,7 +12,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
 
 <!-- Firebase config -->
 <script src="firebaseConfig.js"></script>
@@ -21,7 +20,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>
 body{font-family:'Inter',sans-serif;background:#f2f4f8;margin:0;padding:50px;display:flex;flex-direction:column;align-items:center;color:#1c1c1e;}
-h1{text-align:center;font-weight:600;font-size:2rem;margin-bottom:40px;}
+h1{text-align:center;font-weight:600;font-size:2rem;margin-bottom:30px;}
 .container{display:flex;flex-wrap:wrap;justify-content:center;gap:40px;width:100%;max-width:1200px;}
 .card{background:white;border-radius:24px;padding:30px;box-shadow:0 16px 40px rgba(0,0,0,0.08);transition:0.5s;position:relative;overflow:hidden;}
 .card:hover{transform:translateY(-5px);box-shadow:0 24px 60px rgba(0,0,0,0.12);}
@@ -57,7 +56,6 @@ label{font-weight:600;font-size:0.9rem;margin-top:5px;}
 
 <div class="auth-buttons">
   <button id="signInGoogle">Sign in with Google</button>
-  <button id="signInEmail">Sign in with Email</button>
   <button id="signOut" style="display:none;">Sign Out</button>
 </div>
 
@@ -92,7 +90,7 @@ label{font-weight:600;font-size:0.9rem;margin-top:5px;}
   <div class="card preview">
     <div id="qr-container"></div>
     <div class="download-buttons">
-      <button id="download-png">Download PNG</button>
+      <button id="download-png">Download PNG (Transparent)</button>
       <button id="download-svg">Download SVG</button>
     </div>
   </div>
@@ -104,109 +102,126 @@ label{font-weight:600;font-size:0.9rem;margin-top:5px;}
 </div>
 
 <script>
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-  const qrContainer = document.getElementById("qr-container");
-  const historyList = document.getElementById("historyList");
-  const fgColor = document.getElementById("fgColor");
-  const bgColor = document.getElementById("bgColor");
-  const fgPreview = document.getElementById("fgPreview");
-  const bgPreview = document.getElementById("bgPreview");
-  const gradientInput = document.getElementById("gradient");
-  const gradientPreview = document.getElementById("gradientPreview");
-  let currentUser = null;
+const qrContainer = document.getElementById("qr-container");
+const historyList = document.getElementById("historyList");
+const fgColor = document.getElementById("fgColor");
+const bgColor = document.getElementById("bgColor");
+const fgPreview = document.getElementById("fgPreview");
+const bgPreview = document.getElementById("bgPreview");
+const gradientInput = document.getElementById("gradient");
+const gradientPreview = document.getElementById("gradientPreview");
+let currentUser = null;
 
-  // QR Code init
-  let qrCode = new QRCodeStyling({
-    width: 300, height: 300, data: "",
-    dotsOptions: { color: fgColor.value, type: "rounded" },
-    cornersSquareOptions: { type:"extra-rounded", color: fgColor.value },
-    cornersDotOptions: { type:"dot", color: fgColor.value },
-    backgroundOptions: { color: bgColor.value },
-    imageOptions: { crossOrigin:"anonymous", margin:5 }
-  });
-  qrCode.append(qrContainer);
+// QR Code init
+let qrCode = new QRCodeStyling({
+  width: 300, height: 300, data: "",
+  dotsOptions: { color: fgColor.value, type: "rounded" },
+  cornersSquareOptions: { type:"extra-rounded", color: fgColor.value },
+  cornersDotOptions: { type:"dot", color: fgColor.value },
+  backgroundOptions: { color: "#ffffff" },
+  imageOptions: { crossOrigin:"anonymous", margin:5 }
+});
+qrCode.append(qrContainer);
 
-  // Color previews
-  fgPreview.style.background = fgColor.value;
-  bgPreview.style.background = bgColor.value;
-  fgColor.addEventListener("input",()=>fgPreview.style.background=fgColor.value);
-  bgColor.addEventListener("input",()=>bgPreview.style.background=bgColor.value);
-  gradientInput.addEventListener("input",()=>gradientPreview.style.background=`linear-gradient(90deg, ${gradientInput.value})`);
+// Color previews
+fgPreview.style.background = fgColor.value;
+bgPreview.style.background = bgColor.value;
+fgColor.addEventListener("input",()=>fgPreview.style.background=fgColor.value);
+bgColor.addEventListener("input",()=>bgPreview.style.background=bgColor.value);
+gradientInput.addEventListener("input",()=>gradientPreview.style.background=`linear-gradient(90deg, ${gradientInput.value})`);
 
-  // Authentication
-  document.getElementById("signInGoogle").addEventListener("click", ()=>{
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  });
-  document.getElementById("signOut").addEventListener("click", ()=>auth.signOut());
+// Authentication
+document.getElementById("signInGoogle").addEventListener("click", ()=>{
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider);
+});
+document.getElementById("signOut").addEventListener("click", ()=>auth.signOut());
 
-  auth.onAuthStateChanged(user=>{
-    currentUser=user;
-    document.getElementById("signInGoogle").style.display = user? "none":"inline-block";
-    document.getElementById("signInEmail").style.display = user? "none":"inline-block";
-    document.getElementById("signOut").style.display = user? "inline-block":"none";
-    if(user) loadHistory();
-  });
+auth.onAuthStateChanged(user=>{
+  currentUser=user;
+  document.getElementById("signInGoogle").style.display = user? "none":"inline-block";
+  document.getElementById("signOut").style.display = user? "inline-block":"none";
+  if(user) loadHistory();
+});
 
-  // Generate QR
-  document.getElementById("generate").addEventListener("click",()=>{
-    const text = document.getElementById("text").value;
-    if(!text){alert("Enter text or URL"); return;}
-    let dotsType = document.getElementById("template").value==="classic"?"classy-rounded":document.getElementById("template").value==="dots"?"dots":"rounded";
-    let options = {
-      data:text,
-      dotsOptions:{ color: fgColor.value, type: dotsType },
-      cornersSquareOptions:{ type:"extra-rounded", color: fgColor.value },
-      cornersDotOptions:{ type:"dot", color: fgColor.value },
-      backgroundOptions:{ color:bgColor.value }
-    };
-    const grad=gradientInput.value;
-    if(grad){
-      const stops=grad.split(",").map((c,i)=>({offset:i,color:c}));
-      options.dotsOptions.gradient={ type:"linear", rotation:45, colorStops:stops };
-    }
-    const logoFile = document.getElementById("logoInput").files[0];
-    if(logoFile){
-      const reader = new FileReader();
-      reader.onload=function(e){options.image=e.target.result; qrCode.update(options); saveHistory(text);};
-      reader.readAsDataURL(logoFile);
-    } else { qrCode.update(options); saveHistory(text); }
-  });
+// Generate QR
+document.getElementById("generate").addEventListener("click",()=>{
+  const text = document.getElementById("text").value;
+  if(!text){alert("Enter text or URL"); return;}
+  const template=document.getElementById("template").value;
+  let dotsType=template==="classic"?"classy-rounded":template==="dots"?"dots":"rounded";
 
-  // Download buttons
-  document.getElementById("download-png").addEventListener("click", ()=>qrCode.download({name:"lumiqr",extension:"png"}));
-  document.getElementById("download-svg").addEventListener("click", ()=>qrCode.download({name:"lumiqr",extension:"svg"}));
-
-  // Save to Firestore
-  function saveHistory(text){
-    if(!currentUser) return;
-    db.collection("users").doc(currentUser.uid).collection("qrcodes").add({
-      text:text, timestamp:firebase.firestore.FieldValue.serverTimestamp()
-    }).then(loadHistory);
+  let options = {
+    data:text,
+    dotsOptions:{ color: fgColor.value, type: dotsType },
+    cornersSquareOptions:{ type:"extra-rounded", color: fgColor.value },
+    cornersDotOptions:{ type:"dot", color: fgColor.value },
+    backgroundOptions:{ color:"#ffffff" }
+  };
+  const grad=gradientInput.value;
+  if(grad){
+    const stops=grad.split(",").map((c,i)=>({offset:i,color:c}));
+    options.dotsOptions.gradient={ type:"linear", rotation:45, colorStops:stops };
   }
+  const logoFile=document.getElementById("logoInput").files[0];
+  if(logoFile){
+    const reader=new FileReader();
+    reader.onload=function(e){options.image=e.target.result; qrCode.update(options); saveHistory(text);}
+    reader.readAsDataURL(logoFile);
+  } else { qrCode.update(options); saveHistory(text); }
+});
 
-  // Load user history
-  function loadHistory(){
-    if(!currentUser) return;
-    db.collection("users").doc(currentUser.uid).collection("qrcodes").orderBy("timestamp","desc").limit(10).get().then(snapshot=>{
+// Transparent downloads
+document.getElementById("download-png").addEventListener("click",()=>{
+  qrCode.update({backgroundOptions:{color:"transparent"}});
+  qrCode.download({name:"lumiqr",extension:"png"});
+  qrCode.update({backgroundOptions:{color:"#ffffff"}});
+});
+document.getElementById("download-svg").addEventListener("click",()=>qrCode.download({name:"lumiqr",extension:"svg"}));
+
+// Save history
+function saveHistory(text){
+  if(!currentUser) return;
+  const tempQr = new QRCodeStyling({
+    width:300,height:300,data:text,
+    dotsOptions:{color:fgColor.value,type:"rounded"},
+    cornersSquareOptions:{type:"extra-rounded",color:fgColor.value},
+    cornersDotOptions:{type:"dot",color:fgColor.value},
+    backgroundOptions:{color:"transparent"}
+  });
+  tempQr.getRawDataURL().then((base64)=>{
+    db.collection("users").doc(currentUser.uid).collection("qrcodes").add({
+      text:text,image:base64,timestamp:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(loadHistory);
+  });
+}
+
+// Load history
+function loadHistory(){
+  if(!currentUser) return;
+  db.collection("users").doc(currentUser.uid).collection("qrcodes")
+    .orderBy("timestamp","desc").limit(10).get()
+    .then(snapshot=>{
       historyList.innerHTML="";
       snapshot.forEach(doc=>{
         const div=document.createElement("div");
         div.classList.add("history-item");
         const img=document.createElement("img");
-        const qrData=new QRCodeStyling({width:90,height:90,data:doc.data().text,dotsOptions:{color:fgColor.value,type:"rounded"},cornersSquareOptions:{type:"extra-rounded",color:fgColor.value},backgroundOptions:{color:bgColor.value}});
-        qrData.getRawDataURL().then(url=>img.src=url);
+        img.src=doc.data().image;
         div.appendChild(img);
-        div.onclick=()=>document.getElementById("text").value=doc.data().text;
+        div.onclick=()=>{
+          document.getElementById("text").value=doc.data().text;
+          qrCode.update({data:doc.data().text});
+        };
         historyList.appendChild(div);
       });
     });
-  }
+}
 </script>
-
 </body>
 </html>
+
