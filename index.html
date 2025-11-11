@@ -3,54 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pro Minimalist QR Generator</title>
+<title>✨ Minimalist QR Pro Generator</title>
 <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
-  body { margin:0; font-family: 'Inter', sans-serif; background:#f0f2f5; display:flex; flex-direction:column; align-items:center; min-height:100vh; padding:30px; }
-  h1 { color:#222; text-align:center; margin-bottom:20px; }
-  .container { display:flex; flex-wrap:wrap; justify-content:center; gap:30px; max-width:1200px; width:100%; }
-  .controls, .preview { background:white; border-radius:20px; padding:20px; box-shadow:0 4px 20px rgba(0,0,0,0.08); }
-  .controls { flex:1; min-width:300px; display:flex; flex-direction:column; gap:15px; }
-  .preview { flex:1; min-width:300px; display:flex; flex-direction:column; align-items:center; }
-  input, select, button { padding:10px 15px; font-size:1rem; border-radius:10px; border:1px solid #ccc; outline:none; }
-  button { background:#4caf50; color:white; border:none; cursor:pointer; transition:0.2s; }
-  button:hover { background:#45a049; }
-  #qr-container { margin-top:20px; }
-  .download-buttons { display:flex; gap:10px; margin-top:15px; flex-wrap:wrap; }
+  /* Reset & base */
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Inter',sans-serif;background:#f0f2f8;color:#222;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:40px;}
+  h1{text-align:center;margin-bottom:20px;font-weight:600;}
+
+  /* Container */
+  .container{display:flex;flex-wrap:wrap;justify-content:center;gap:30px;max-width:1200px;width:100%;}
+  .card{background:white;border-radius:20px;padding:25px;box-shadow:0 8px 25px rgba(0,0,0,0.08);transition:0.3s;}
+  .card:hover{box-shadow:0 12px 35px rgba(0,0,0,0.12);}
+
+  /* Controls */
+  .controls{flex:1;min-width:320px;display:flex;flex-direction:column;gap:15px;}
+  input[type=text], input[type=color], select, button{padding:12px 15px;font-size:1rem;border-radius:12px;border:1px solid #ccc;outline:none;}
+  button{background:#4caf50;color:white;border:none;cursor:pointer;transition:0.3s;}
+  button:hover{background:#45a049;}
+  label{font-weight:600;font-size:0.9rem;margin-top:8px;}
+
+  /* Preview */
+  .preview{flex:1;min-width:320px;display:flex;flex-direction:column;align-items:center;gap:15px;}
+  #qr-container{margin-top:15px;}
+  .download-buttons{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px;}
+  .download-buttons button{flex:1;min-width:120px;}
+
+  /* History */
+  .history{margin-top:30px;width:100%;max-width:650px;}
+  .history h2{font-weight:600;margin-bottom:10px;}
+  .history-list{display:flex;flex-wrap:wrap;gap:10px;}
+  .history-item{width:80px;height:80px;overflow:hidden;border-radius:15px;cursor:pointer;transition:0.3s;}
+  .history-item:hover{transform:scale(1.1);}
+  .history-item img{width:100%;height:100%;object-fit:contain;}
+
+  /* Responsive */
+  @media(max-width:900px){.container{flex-direction:column;align-items:center;}}
 </style>
 </head>
 <body>
 
-<h1>✨ Pro Minimalist QR Generator</h1>
+<h1>✨ Minimalist QR Pro Generator</h1>
 
 <div class="container">
-  <div class="controls">
-    <input type="text" id="text" placeholder="Enter URL or text">
-    
+  <div class="card controls">
+    <label>Enter Text or URL</label>
+    <input type="text" id="text" placeholder="https://example.com">
+
     <label>Foreground Color</label>
     <input type="color" id="fgColor" value="#000000">
-    
+
     <label>Background Color</label>
     <input type="color" id="bgColor" value="#ffffff">
 
-    <label>Gradient (optional)</label>
-    <input type="text" id="gradient" placeholder="e.g., #ff7e5f,#feb47b">
+    <label>Gradient (optional, comma-separated)</label>
+    <input type="text" id="gradient" placeholder="#ff7e5f,#feb47b">
 
-    <label>QR Template</label>
+    <label>Template</label>
     <select id="template">
       <option value="rounded">Rounded Dots</option>
       <option value="classic">Classic Squares</option>
       <option value="dots">Dots + Gradient</option>
     </select>
 
-    <label>Upload Logo/Icon (optional)</label>
+    <label>Upload Logo/Icon</label>
     <input type="file" id="logoInput" accept="image/*">
 
     <button id="generate">Generate QR Code</button>
   </div>
 
-  <div class="preview">
+  <div class="card preview">
     <div id="qr-container"></div>
     <div class="download-buttons">
       <button id="download-png">Download PNG</button>
@@ -59,7 +82,13 @@
   </div>
 </div>
 
+<div class="history card">
+  <h2>History</h2>
+  <div class="history-list" id="historyList"></div>
+</div>
+
 <script>
+  // Initialize QRCodeStyling
   let qrCode = new QRCodeStyling({
     width: 300,
     height: 300,
@@ -74,9 +103,27 @@
   const qrContainer = document.getElementById("qr-container");
   qrCode.append(qrContainer);
 
-  document.getElementById("generate").addEventListener("click", () => {
+  // History management
+  const historyList = document.getElementById("historyList");
+  let history = JSON.parse(localStorage.getItem("qrHistory")) || [];
+
+  function updateHistory(){
+    historyList.innerHTML = "";
+    history.slice(-5).reverse().forEach((item,index)=>{
+      const img = document.createElement("img");
+      img.src = item;
+      const div = document.createElement("div");
+      div.classList.add("history-item");
+      div.appendChild(img);
+      div.onclick = ()=>qrCode.update({data:item,text:item});
+      historyList.appendChild(div);
+    });
+  }
+  updateHistory();
+
+  document.getElementById("generate").addEventListener("click",()=>{
     const text = document.getElementById("text").value;
-    if(!text){ alert("Enter text or URL!"); return; }
+    if(!text){alert("Enter text or URL!");return;}
 
     const fg = document.getElementById("fgColor").value;
     const bg = document.getElementById("bgColor").value;
@@ -85,36 +132,44 @@
     const logoFile = document.getElementById("logoInput").files[0];
 
     let dotsType = "rounded";
-    if(template === "classic") dotsType="classy-rounded";
-    if(template === "dots") dotsType="dots";
+    if(template==="classic") dotsType="classy-rounded";
+    if(template==="dots") dotsType="dots";
 
-    let qrOptions = {
-      data: text,
-      dotsOptions: { color: fg, type: dotsType },
-      cornersSquareOptions: { type: "extra-rounded", color: fg },
-      cornersDotOptions: { type: "dot", color: fg },
-      backgroundOptions: { color: bg }
+    let options = {
+      data:text,
+      dotsOptions:{ color:fg, type:dotsType },
+      cornersSquareOptions:{ type:"extra-rounded", color:fg },
+      cornersDotOptions:{ type:"dot", color:fg },
+      backgroundOptions:{ color:bg }
     };
 
     if(grad){
-      qrOptions.dotsOptions.gradient = { type:"linear", rotation: 45, colorStops: grad.split(",").map((c,i)=>({offset:i, color:c})) }
+      const stops = grad.split(",").map((c,i)=>({offset:i,color:c}));
+      options.dotsOptions.gradient = { type:"linear", rotation:45, colorStops: stops };
     }
 
     if(logoFile){
       const reader = new FileReader();
       reader.onload = function(e){
-        qrOptions.image = e.target.result;
-        qrCode.update(qrOptions);
+        options.image = e.target.result;
+        qrCode.update(options);
+        saveHistory(qrCode.getRawDataURL());
       }
       reader.readAsDataURL(logoFile);
-    } else {
-      qrCode.update(qrOptions);
+    }else{
+      qrCode.update(options);
+      saveHistory(qrCode.getRawDataURL());
     }
   });
 
-  document.getElementById("download-png").addEventListener("click", ()=> qrCode.download({name:"qr-code", extension:"png"}));
-  document.getElementById("download-svg").addEventListener("click", ()=> qrCode.download({name:"qr-code", extension:"svg"}));
-</script>
+  function saveHistory(dataURL){
+    history.push(dataURL);
+    localStorage.setItem("qrHistory", JSON.stringify(history.slice(-20)));
+    updateHistory();
+  }
 
+  document.getElementById("download-png").addEventListener("click",()=> qrCode.download({name:"qr-code", extension:"png"}));
+  document.getElementById("download-svg").addEventListener("click",()=> qrCode.download({name:"qr-code", extension:"svg"}));
+</script>
 </body>
 </html>
