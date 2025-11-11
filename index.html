@@ -19,7 +19,7 @@
 <!-- Fonts & Styles -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>
-body { margin:0; font-family:'Inter',sans-serif; background:#f9fafb; color:#1f2937; }
+body { margin:0; font-family:'Inter',sans-serif; background:#f5f5f7; color:#1f2937; }
 h1,h2 { font-weight:600; }
 .sidebar { position:fixed; top:0; left:0; width:220px; height:100%; background:#6366f1; color:white; display:flex; flex-direction:column; padding:20px; gap:10px; box-shadow:2px 0 10px rgba(0,0,0,0.1);}
 .sidebar button { background:transparent; border:none; color:white; font-weight:600; font-size:1rem; cursor:pointer; text-align:left; padding:10px; border-radius:8px; transition:0.3s; }
@@ -211,10 +211,12 @@ auth.onAuthStateChanged(user=>{
   if(user) loadHistory();
 });
 
-// Generate QR
-document.getElementById("generate").addEventListener("click",()=>{
-  const text = document.getElementById("text").value;
+// Generate QR and save immediately
+document.getElementById("generate").addEventListener("click", async () => {
+  const text = document.getElementById("text").value.trim();
   if(!text){ alert("Enter text or URL"); return; }
+  if(!currentUser){ alert("Sign in to save QR codes!"); return; }
+
   const template = document.getElementById("template").value;
   const dotsType = template==="classic"?"classy-rounded":template==="dots"?"dots":"rounded";
 
@@ -226,8 +228,23 @@ document.getElementById("generate").addEventListener("click",()=>{
     dotsType,
     logoDataURL: currentLogoDataURL
   };
+
   updateQRCode(settings);
-  saveHistoryWithImage(settings);
+
+  try {
+    const base64 = await qrCode.getRawDataURL();
+    await db.collection("users").doc(currentUser.uid)
+      .collection("qrcodes").add({
+        text: settings.text,
+        settings,
+        image: base64,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    loadHistory();
+  } catch(err){
+    console.error("Error saving QR:", err);
+    alert("Failed to save QR code: "+err.message);
+  }
 });
 
 function updateQRCode(settings){
@@ -254,51 +271,28 @@ document.getElementById("download-png").addEventListener("click",()=>{
 });
 document.getElementById("download-svg").addEventListener("click",()=>qrCode.download({name:"lumiqr",extension:"svg"}));
 
-// Save QR as Base64
-function saveHistoryWithImage(settings){
-  if(!currentUser) return;
-  const tempQr = new QRCodeStyling({
-    width:300,height:300,data:settings.text,
-    dotsOptions:{ color:settings.fgColor, type:settings.dotsType },
-    cornersSquareOptions:{ type:"extra-rounded", color:settings.fgColor },
-    cornersDotOptions:{ type:"dot", color:settings.fgColor },
-    backgroundOptions:{ color:"transparent" },
-    imageOptions: { margin:5, image: settings.logoDataURL }
-  });
-  if(settings.gradient){
-    const stops = settings.gradient.split(",").map((c,i)=>({offset:i,color:c}));
-    tempQr.update({dotsOptions:{gradient:{type:"linear", rotation:45, colorStops:stops}}});
-  }
-  tempQr.getRawDataURL().then(base64=>{
-    db.collection("users").doc(currentUser.uid).collection("qrcodes").add({
-      text: settings.text,
-      settings,
-      image: base64,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(loadHistory)
-    .catch(err=>alert("Error saving QR: "+err.message));
-  });
-}
-
 // Load History
-function loadHistory(){
+async function loadHistory(){
   if(!currentUser) return;
   showPage("pageHistory");
-  db.collection("users").doc(currentUser.uid).collection("qrcodes")
-    .orderBy("timestamp","desc").limit(20).get().then(snapshot=>{
-      historyList.innerHTML="";
-      snapshot.forEach(doc=>{
-        const data = doc.data();
-        const div = document.createElement("div");
-        div.classList.add("history-item");
-        const img = document.createElement("img");
-        img.src = data.image;
-        div.appendChild(img);
-        div.title = data.text;
-        div.onclick = ()=> { updateQRCode(data.settings); showPage("pageEditor"); }
-        historyList.appendChild(div);
-      });
-    });
+  const snapshot = await db.collection("users").doc(currentUser.uid)
+    .collection("qrcodes")
+    .orderBy("timestamp","desc")
+    .limit(20)
+    .get();
+
+  historyList.innerHTML="";
+  snapshot.forEach(doc=>{
+    const data = doc.data();
+    const div = document.createElement("div");
+    div.classList.add("history-item");
+    const img = document.createElement("img");
+    img.src = data.image;
+    div.appendChild(img);
+    div.title = data.text;
+    div.onclick = ()=> { updateQRCode(data.settings); showPage("pageEditor"); }
+    historyList.appendChild(div);
+  });
 }
 </script>
 </body>
