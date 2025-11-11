@@ -232,7 +232,7 @@ document.getElementById("generate").addEventListener("click", async () => {
   updateQRCode(settings);
 
   try {
-    const base64 = await qrCode.getRawDataURL();
+    const base64 = await qrCode.getRawData("image/png");
     await db.collection("users").doc(currentUser.uid)
       .collection("qrcodes").add({
         text: settings.text,
