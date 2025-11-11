@@ -37,9 +37,12 @@ label{font-weight:600;margin-top:10px;display:block;}
 .download-buttons { display:flex; gap:15px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
 .download-buttons button { flex:1; min-width:130px;}
 .history-list { display:flex; flex-wrap:wrap; gap:15px; }
-.history-item { width:90px; height:90px; overflow:hidden; border-radius:18px; cursor:pointer; border:1px solid #ddd; transition:0.3s; display:flex; align-items:center; justify-content:center;}
-.history-item:hover { transform:scale(1.1); box-shadow:0 8px 20px rgba(0,0,0,0.08);}
-.history-item img { width:100%; height:100%; object-fit:contain; }
+.history-item { width:120px; height:140px; overflow:hidden; border-radius:18px; cursor:pointer; border:1px solid #ddd; transition:0.3s; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:5px; box-sizing:border-box;}
+.history-item:hover { transform:scale(1.05); box-shadow:0 8px 20px rgba(0,0,0,0.08);}
+.history-item img { width:100%; height:100px; object-fit:contain; border-radius:12px;}
+.history-item span { font-size:0.8rem; text-align:center; word-break:break-all; margin-top:5px;}
+.delete-btn { margin-top:5px; background:#ef4444; }
+.delete-btn:hover { background:#b91c1c; }
 .color-preview { width:25px; height:25px; border-radius:50%; border:1px solid #aaa; display:inline-block; vertical-align:middle; margin-left:10px; }
 .gradient-preview { width:100%; height:10px; border-radius:10px; margin-top:-10px; transition:0.4s; }
 .auth-buttons { display:flex; gap:15px; margin-bottom:20px;}
@@ -142,6 +145,17 @@ const logoInput = document.getElementById("logoInput");
 let currentUser = null;
 let currentLogoDataURL = null;
 
+// Convert Blob to Base64
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Gradient presets
 const gradientPresets = ["#6a11cb,#2575fc","#11998e,#38ef7d","#ee0979,#ff6a00"];
 const gradientPresetsContainer = document.getElementById("gradientPresets");
 gradientPresets.forEach(g => {
@@ -151,17 +165,6 @@ gradientPresets.forEach(g => {
   div.onclick = ()=> { gradientInput.value = g; gradientPreview.style.background = `linear-gradient(90deg, ${g})`; }
   gradientPresetsContainer.appendChild(div);
 });
-
-
-  // Convert Blob to Base64 string
-function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
 
 // Init QR
 let qrCode = new QRCodeStyling({
@@ -180,7 +183,7 @@ fgColor.addEventListener("input", ()=>fgPreview.style.background = fgColor.value
 bgColor.addEventListener("input", ()=>bgPreview.style.background = bgColor.value);
 gradientInput.addEventListener("input", ()=>gradientPreview.style.background = `linear-gradient(90deg, ${gradientInput.value})`);
 
-// Logo upload via drop or click
+// Logo upload
 logoDrop.addEventListener("click", ()=>logoInput.click());
 logoDrop.addEventListener("dragover", e=>{ e.preventDefault(); logoDrop.classList.add("dragover"); });
 logoDrop.addEventListener("dragleave", e=>{ e.preventDefault(); logoDrop.classList.remove("dragover"); });
@@ -190,7 +193,6 @@ logoDrop.addEventListener("drop", e=> {
   if(file) { handleLogo(file); }
 });
 logoInput.addEventListener("change", e=> { handleLogo(e.target.files[0]); });
-
 function handleLogo(file){
   const reader = new FileReader();
   reader.onload = e => {
@@ -200,7 +202,7 @@ function handleLogo(file){
   reader.readAsDataURL(file);
 }
 
-// Page navigation
+// Navigation
 document.getElementById("navEditor").addEventListener("click", ()=>showPage("pageEditor"));
 document.getElementById("navHistory").addEventListener("click", ()=>showPage("pageHistory"));
 document.getElementById("navSettings").addEventListener("click", ()=>showPage("pageSettings"));
@@ -222,49 +224,7 @@ auth.onAuthStateChanged(user=>{
   if(user) loadHistory();
 });
 
-document.getElementById("generate").addEventListener("click", async () => {
-  const text = document.getElementById("text").value.trim();
-  if (!text) { alert("Enter text or URL"); return; }
-  if (!currentUser) { alert("Sign in to save QR codes!"); return; }
-
-  const template = document.getElementById("template").value;
-  const dotsType = template === "classic" ? "classy-rounded" : template === "dots" ? "dots" : "rounded";
-
-  const settings = {
-    text,
-    fgColor: fgColor.value,
-    bgColor: bgColor.value,
-    gradient: gradientInput.value,
-    dotsType,
-    logoDataURL: currentLogoDataURL
-  };
-
-  // Update QR code
-  updateQRCode(settings);
-
-  try {
-    // Get Blob from QR
-    const blob = await qrCode.getRawData("image/png");
-    // Convert Blob to Base64
-    const base64 = await blobToBase64(blob);
-
-    // Save to Firestore
-    await db.collection("users").doc(currentUser.uid)
-      .collection("qrcodes").add({
-        text: settings.text,
-        settings,
-        image: base64,          // now Base64 string
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-    loadHistory();
-  } catch (err) {
-    console.error("Error saving QR:", err);
-    alert("Failed to save QR code: " + err.message);
-  }
-});
-
-
+// Update QR function
 function updateQRCode(settings){
   const options = {
     data: settings.text,
@@ -281,6 +241,45 @@ function updateQRCode(settings){
   qrCode.update(options);
 }
 
+// Generate QR
+document.getElementById("generate").addEventListener("click", async () => {
+  const text = document.getElementById("text").value.trim();
+  if(!text){ alert("Enter text or URL"); return; }
+
+  const template = document.getElementById("template").value;
+  const dotsType = template==="classic"?"classy-rounded":template==="dots"?"dots":"rounded";
+
+  const settings = {
+    text,
+    fgColor: fgColor.value,
+    bgColor: bgColor.value,
+    gradient: gradientInput.value,
+    dotsType,
+    logoDataURL: currentLogoDataURL
+  };
+
+  updateQRCode(settings);
+
+  // Save to Firestore if signed in
+  if(currentUser){
+    try {
+      const blob = await qrCode.getRawData("image/png");
+      const base64 = await blobToBase64(blob);
+
+      await db.collection("users").doc(currentUser.uid)
+        .collection("qrcodes").add({
+          text: settings.text,
+          settings,
+          image: base64,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      loadHistory();
+    } catch(err){
+      console.error("Error saving QR:", err);
+    }
+  }
+});
+
 // Downloads
 document.getElementById("download-png").addEventListener("click",()=>{
   qrCode.update({backgroundOptions:{color:"transparent"}});
@@ -296,7 +295,7 @@ async function loadHistory(){
   const snapshot = await db.collection("users").doc(currentUser.uid)
     .collection("qrcodes")
     .orderBy("timestamp","desc")
-    .limit(20)
+    .limit(50)
     .get();
 
   historyList.innerHTML="";
@@ -304,10 +303,28 @@ async function loadHistory(){
     const data = doc.data();
     const div = document.createElement("div");
     div.classList.add("history-item");
+
     const img = document.createElement("img");
     img.src = data.image;
     div.appendChild(img);
-    div.title = data.text;
+
+    const span = document.createElement("span");
+    span.textContent = data.text;
+    div.appendChild(span);
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "Delete";
+    delBtn.classList.add("delete-btn");
+    delBtn.onclick = async (e)=>{
+      e.stopPropagation();
+      if(confirm("Delete this QR code?")){
+        await db.collection("users").doc(currentUser.uid)
+          .collection("qrcodes").doc(doc.id).delete();
+        loadHistory();
+      }
+    };
+    div.appendChild(delBtn);
+
     div.onclick = ()=> { updateQRCode(data.settings); showPage("pageEditor"); }
     historyList.appendChild(div);
   });
