@@ -211,14 +211,13 @@ auth.onAuthStateChanged(user=>{
   if(user) loadHistory();
 });
 
-// Generate QR and save immediately
 document.getElementById("generate").addEventListener("click", async () => {
   const text = document.getElementById("text").value.trim();
-  if(!text){ alert("Enter text or URL"); return; }
-  if(!currentUser){ alert("Sign in to save QR codes!"); return; }
+  if (!text) { alert("Enter text or URL"); return; }
+  if (!currentUser) { alert("Sign in to save QR codes!"); return; }
 
   const template = document.getElementById("template").value;
-  const dotsType = template==="classic"?"classy-rounded":template==="dots"?"dots":"rounded";
+  const dotsType = template === "classic" ? "classy-rounded" : template === "dots" ? "dots" : "rounded";
 
   const settings = {
     text,
@@ -229,23 +228,31 @@ document.getElementById("generate").addEventListener("click", async () => {
     logoDataURL: currentLogoDataURL
   };
 
+  // Update QR code
   updateQRCode(settings);
 
   try {
-    const base64 = await qrCode.getRawData("image/png");
+    // Get Blob from QR
+    const blob = await qrCode.getRawData("image/png");
+    // Convert Blob to Base64
+    const base64 = await blobToBase64(blob);
+
+    // Save to Firestore
     await db.collection("users").doc(currentUser.uid)
       .collection("qrcodes").add({
         text: settings.text,
         settings,
-        image: base64,
+        image: base64,          // now Base64 string
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
+
     loadHistory();
-  } catch(err){
+  } catch (err) {
     console.error("Error saving QR:", err);
-    alert("Failed to save QR code: "+err.message);
+    alert("Failed to save QR code: " + err.message);
   }
 });
+
 
 function updateQRCode(settings){
   const options = {
